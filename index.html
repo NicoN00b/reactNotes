@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <script src="https://fb.me/react-15.2.1.js"></script>
-        <script src="https://fb.me/react-dom-15.2.1.js"></script>
+        <script src="https://fb.me/react-15.3.0.js"></script>
+        <script src="https://fb.me/react-dom-15.3.0.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.34/browser.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/2.0.3/fetch.min.js">
+        </script>
+        <script src="https://npmcdn.com/react-draggable"></script>
         <link rel="stylesheet" href="css/master.css">
         <title>React Components</title>
     </head>
@@ -20,8 +23,17 @@
                     top: this.randomBetween(0, window.innerHeight - 150, 'px')
                 }
               },
+              componentDidUpdate() {
+                if (this.state.editing) {
+                    this.refs.newText.focus()
+                    this.refs.newText.select()
+                }
+              },
+              shouldComponentUpdate() {
+                return this.props.children !== nextProps.children || this.state !== nextState
+              },
               randomBetween(x, y, s) {
-                return (x, + Math.ceil(Math.random() * (y-x))) + s
+                return (x + Math.ceil(Math.random() * (y-x))) + s
               },
               edit() {
                 this.setState({editing: true})
@@ -36,7 +48,7 @@
               renderForm() {
                 return (
                     <div className="note" style={this.style}>
-                      <textarea ref="newText"></textarea>
+                      <textarea ref="newText" defaultValue={this.props.children}></textarea>
                       <button onClick={this.save}>Save</button>
                     </div>
                 )
@@ -54,14 +66,16 @@
                     )
               },
               render() {
-                return (this.state.editing) ? this.renderForm() : this.renderDisplay()
+                return ( <ReactDraggable> {(this.state.editing) ?    this.renderForm() : this.renderDisplay()}
+                </ReactDraggable>
+                )
               }
             })
 
             var Board = React.createClass({
               propTypes: {
                   count: function(props, propName) {
-                    if(typeof props[propName] !=="number"){
+                    if(typeof props[propName] !== "number"){
                       return new Error("the count must be a number")
                     }
 
@@ -75,6 +89,20 @@
                   return {
                     notes: []
                   }
+              },
+              componentWillMount() {
+                if (this.props.count) {
+                  var url = `http://baconipsum.com/api/?type=all-meat&sentences=${this.props.count}`
+                  fetch(url, {mode: 'no-cors')
+                      .then(results => results.json())
+                      .then(array => array[0])
+                      .then(text => text.split('. '))
+                      .then(array => array.forEach(
+                          sentence => this.add(sentence)))
+                      .catch(function(err) {
+                        console.log("didn't connect to the API", err)
+                      })
+                }
               },
               nextId() {
                 this.uniqueId = this.uniqueId || 0
@@ -102,7 +130,7 @@
                 this.setState({notes})
               },
               remove(id) {
-                  var notes = this.state.filter(note => noteid !== id)
+                  var notes = this.state.notes.filter(note => note.id !== id)
                   this.setState({notes})
               },
               eachNote(note) {
@@ -114,7 +142,7 @@
               render() {
                   return (<div className="board">
                             {this.state.notes.map(this.eachNote)}
-                            <button onClick={() => this.add(false)}>+</button>
+                            <button onClick={() => this.add('false')}>+</button>
                           </div>)
               }
 
